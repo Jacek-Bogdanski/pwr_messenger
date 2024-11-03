@@ -16,6 +16,11 @@ WORKDIR /app
  
 COPY --from=builder /app/venv venv
 COPY app.py app.py
+COPY api.py api.py
+COPY auth.py auth.py
+COPY config.py config.py
+COPY models.py models.py
+COPY rsa.py rsa.py
  
 ENV VIRTUAL_ENV=/app/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
