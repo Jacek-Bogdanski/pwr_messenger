@@ -178,7 +178,7 @@
         token = null;
 
         register = async (username, password, n, e) => {
-          const result = await post("http://127.0.0.1:8080/auth/register", {
+          const result = await post("/auth/register", {
             username,
             password,
             n,
@@ -189,7 +189,7 @@
         };
 
         login = async (username, password) => {
-          const result = await post("http://127.0.0.1:8080/auth/login", {
+          const result = await post("/auth/login", {
             username,
             password,
           });
@@ -199,7 +199,7 @@
 
         sendMessage = async (receiver, content, token) => {
           const result = await post(
-            "http://127.0.0.1:8080/message/conversations",
+            "/message/conversations",
             {
               receiver,
               content,
@@ -211,19 +211,19 @@
         };
 
         users = async (token) => {
-          return await get(`http://127.0.0.1:8080/users`, token);
+          return await get(`/users`, token);
         };
 
         conversations = async (token) => {
           return await get(
-            `http://127.0.0.1:8080/message/conversations`,
+            `/message/conversations`,
             token
           );
         };
 
         conversationsWithUser = async (username, token) => {
           return await get(
-            `http://127.0.0.1:8080/message/conversations/${username}`,
+            `/message/conversations/${username}`,
             token
           );
         };
