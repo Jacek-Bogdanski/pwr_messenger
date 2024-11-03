@@ -12,7 +12,8 @@ def create_app():
     app.register_blueprint(routes)
 
     with app.app_context():
-        db.create_all()
+        if not os.path.exists("instance/messenger.db"):
+            db.create_all()
 
     return app
 
