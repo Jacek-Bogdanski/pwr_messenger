@@ -22,9 +22,9 @@ COPY config.py config.py
 COPY models.py models.py
 COPY rsa.py rsa.py
  
-ENV VIRTUAL_ENV=/app/venv
+ENV VIRTUAL_ENV=/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-ENV FLASK_APP=app/app.py
+ENV FLASK_APP=app.py
  
 EXPOSE 8080
  
