@@ -142,6 +142,6 @@ def get_conversation_messages(current_user, participant):
 @token_required
 def get_users(current_user):
     users = User.query.all()
-    users_data = [{'username': user.username, 'n': user.n, 'e': user.e} for user in users]
+    users_data = [{'username': user.username} for user in users]
 
     return jsonify({'users': users_data}), 200
