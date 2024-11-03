@@ -10,11 +10,20 @@
         padding: 1rem;
         background-color: #f1f1f1;
       }
+      .formWrapper {
+        margin-top: 1rem;
+      }
     </style>
   </head>
   <body>
     <h1>Connection Test Page</h1>
     <div id="debugWrapper" class="debugWrapper"></div>
+
+    <div class="formWrapper">
+      <input type="text" id="receiver" placeholder="Odbiorca" />
+      <input type="text" id="content" placeholder="Wiadomość" />
+      <button id="send">Send</button>
+    </div>
 
     <script>
       const setDebug = (content) => {
@@ -215,17 +224,11 @@
         };
 
         conversations = async (token) => {
-          return await get(
-            `/message/conversations`,
-            token
-          );
+          return await get(`/message/conversations`, token);
         };
 
         conversationsWithUser = async (username, token) => {
-          return await get(
-            `/message/conversations/${username}`,
-            token
-          );
+          return await get(`/message/conversations/${username}`, token);
         };
       }
 
@@ -327,6 +330,34 @@
         setDebug(
           `Message decrypted with client private key: ${decryptedMessage}`
         );
+
+        const sendButton = document
+          .getElementById("send")
+          .addEventListener("click", async () => {
+            const receiver = document.getElementById("receiver").value;
+            const content = document.getElementById("content").value;
+            const encryptedMessage = RSA.encrypt(content, serverE, serverN);
+
+            const sendMessage = await client.sendMessage(
+              receiver,
+              encryptedMessage,
+              JWToken
+            );
+            setDebug(
+              `SendMessage result: ${JSON.stringify(sendMessage ?? "")}`
+            );
+
+            const conversationAfter = await client.conversationsWithUser(
+              receiver,
+              JWToken
+            );
+            setDebug(
+              `Conversation: ${JSON.stringify(conversationAfter ?? "")}`
+            );
+
+            document.getElementById("receiver").value = '';
+            document.getElementById("content").value = '';
+          });
       };
       testScenario();
     </script>
