@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Server Test Page</title>
+
+    <style>
+      .debugWrapper {
+        padding: 1rem;
+        background-color: #f1f1f1;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Connection Test Page</h1>
+    <div id="debugWrapper" class="debugWrapper"></div>
+
+    <script>
+      const setDebug = (content) => {
+        const p = document.createElement("pre");
+        p.innerText = content;
+        document.getElementById("debugWrapper").append(p);
+      };
+
+      class RSAConnect {
+        gcd = (a, b) => {
+          while (b !== 0) {
+            const temp = b;
+            b = a % b;
+            a = temp;
+          }
+          return a;
+        };
+
+        modularInverse = (e, fi) => {
+          let [old_r, r] = [e, fi];
+          let [old_s, s] = [1, 0];
+          let [old_t, t] = [0, 1];
+
+          while (r !== 0) {
+            const quotient = Math.floor(old_r / r);
+            [old_r, r] = [r, old_r - quotient * r];
+            [old_s, s] = [s, old_s - quotient * s];
+            [old_t, t] = [t, old_t - quotient * t];
+          }
+
+          return (old_s + fi) % fi;
+        };
+
+        getKeyPair = (P, Q, E) => {
+          const N = P * Q;
+          const Fi = (P - 1) * (Q - 1);
+          const D = this.modularInverse(E, Fi);
+          return [N, D];
+        };
+
+        // Modular exponentiation function to handle large numbers
+        modExp = (base, exponent, modulus) => {
+          let result = 1;
+          base = base % modulus;
+          while (exponent > 0) {
+            if (exponent % 2 === 1) {
+              result = (result * base) % modulus;
+            }
+            exponent = Math.floor(exponent / 2);
+            base = (base * base) % modulus;
+          }
+          return result;
+        };
+
+        // Function to convert decimal to hex with padding to a fixed length
+        decimalToHex = (decimal, length) => {
+          return decimal.toString(16).padStart(length, "0");
+        };
+
+        // Encrypt function with hexadecimal encoding and colon separators
+        encrypt = (text, e, n) => {
+          const maxHexLength = Math.ceil(Math.log2(n) / 4); // Each hex digit represents 4 bits
+          return text
+            .split("")
+            .map((char) => {
+              const asciiCode = char.charCodeAt(0);
+              const encryptedChar = this.modExp(asciiCode, e, n);
+              return this.decimalToHex(encryptedChar, maxHexLength); // Fixed-length hex
+            })
+            .join(":"); // Join with colons
+        };
+
+        // Decrypt function that splits the hex string and decodes each segment
+        decrypt = (cipher, d, n) => {
+          const hexValues = cipher.split(":"); // Split hex string by colons
+          return hexValues
+            .map((hexChar) => {
+              const encryptedDecimal = parseInt(hexChar, 16); // Convert hex to decimal
+              const asciiCode = this.modExp(encryptedDecimal, d, n); // Decrypt the decimal
+              return String.fromCharCode(asciiCode);
+            })
+            .join("");
+        };
+
+        parseJwt = (token) => {
+          const base64Url = token.split(".")[1];
+          const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+          const jsonPayload = decodeURIComponent(
+            atob(base64)
+              .split("")
+              .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+              .join("")
+          );
+
+          return JSON.parse(jsonPayload);
+        };
+      }
+
+      const RSA = new RSAConnect();
+
+      const get = async (url, token) => {
+        const headers = {
+          "Content-Type": "application/json",
+        };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const result = await fetch(url, {
+          method: "GET",
+          headers,
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("GET failed: " + response.statusText);
+            }
+            return response.json();
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            return null;
+          });
+
+        setDebug(`# GET <${url}>`);
+        setDebug(`# GET RESULT: ${JSON.stringify(result)}`);
+
+        return result;
+      };
+
+      const post = async (url, data, token) => {
+        const headers = {
+          "Content-Type": "application/json",
+        };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const result = await fetch(url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(data),
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Login failed: " + response.statusText);
+            }
+            return response.json();
+          })
+          .catch((error) => {
+            console.error("Error:", error);
+            return null;
+          });
+
+        setDebug(`# POST <${url}>, ${JSON.stringify(data)}`);
+        setDebug(`# POST RESULT: ${JSON.stringify(result)}`);
+
+        return result;
+      };
+
+      class Client {
+        token = null;
+
+        register = async (username, password, n, e) => {
+          const result = await post("http://127.0.0.1:8080/auth/register", {
+            username,
+            password,
+            n,
+            e,
+          });
+
+          return result;
+        };
+
+        login = async (username, password) => {
+          const result = await post("http://127.0.0.1:8080/auth/login", {
+            username,
+            password,
+          });
+
+          return result;
+        };
+
+        sendMessage = async (receiver, content, token) => {
+          const result = await post(
+            "http://127.0.0.1:8080/message/conversations",
+            {
+              receiver,
+              content,
+            },
+            token
+          );
+
+          return result;
+        };
+
+        users = async (token) => {
+          return await get(`http://127.0.0.1:8080/users`, token);
+        };
+
+        conversations = async (token) => {
+          return await get(
+            `http://127.0.0.1:8080/message/conversations`,
+            token
+          );
+        };
+
+        conversationsWithUser = async (username, token) => {
+          return await get(
+            `http://127.0.0.1:8080/message/conversations/${username}`,
+            token
+          );
+        };
+      }
+
+      /// test scenario: register, login, post message, get message,
+
+      const testScenario = async () => {
+        setDebug(`// TEST CONNECTION`);
+
+        const client = new Client();
+        const username = `michael.jack.${Math.random()}`;
+        const messageText = "Hello my friend! Smacznej kawusi";
+        const passwordhash =
+          "176d3c9c166b319d8b5470b336d7582861e347677770731a772135557ab2b7bc";
+        const clientP = 73;
+        const clientQ = 101;
+        const clientE = 17;
+        const [clientN, clientD] = RSA.getKeyPair(clientP, clientQ, clientE);
+
+        setDebug(`clientP: ${clientP}`);
+        setDebug(`clientQ: ${clientQ}`);
+
+        setDebug(`clientE: ${clientE}`);
+        setDebug(`clientN: ${clientN}`);
+
+        const registerResult = await client.register(
+          username,
+          passwordhash,
+          clientN,
+          clientE
+        );
+        setDebug(`Register result: ${JSON.stringify(registerResult ?? "")}`);
+
+        const loginResult = await client.login(username, passwordhash);
+        setDebug(`Login result: ${JSON.stringify(loginResult ?? "")}`);
+
+        const JWToken = loginResult.token;
+        if (!JWToken) {
+          setDebug(`Empty JWT - exit.`);
+          return;
+        }
+
+        const users = await client.users(JWToken);
+        setDebug(`Users list: ${JSON.stringify(users ?? "")}`);
+
+        const tokenContent = RSA.parseJwt(JWToken);
+        setDebug(`JWT content: ${JSON.stringify(tokenContent ?? "")}`);
+
+        const serverE = tokenContent.e;
+        const serverN = tokenContent.n;
+        setDebug(`serverE: ${serverE}`);
+        setDebug(`serverN: ${serverN}`);
+
+        const conversations = await client.conversations(JWToken);
+        setDebug(`Conversations list: ${JSON.stringify(conversations ?? "")}`);
+
+        const firstUserUsername = users.users[0].username;
+
+        const conversationsWithFirstUser = await client.conversationsWithUser(
+          firstUserUsername,
+          JWToken
+        );
+        setDebug(
+          `ConversationsWithFirstUser: ${JSON.stringify(
+            conversationsWithFirstUser ?? ""
+          )}`
+        );
+
+        const encryptedMessage = RSA.encrypt(messageText, serverE, serverN);
+        setDebug(`Message text: ${messageText}`);
+        setDebug(
+          `Message encrypted with server public key: ${encryptedMessage}`
+        );
+
+        const sendMessage = await client.sendMessage(
+          firstUserUsername,
+          encryptedMessage,
+          JWToken
+        );
+        setDebug(`SendMessage result: ${JSON.stringify(sendMessage ?? "")}`);
+
+        const conversationsAfter = await client.conversations(JWToken);
+        setDebug(
+          `Conversations list: ${JSON.stringify(conversationsAfter ?? "")}`
+        );
+
+        const conversationsWithFirstUserAfter =
+          await client.conversationsWithUser(firstUserUsername, JWToken);
+        setDebug(
+          `ConversationsWithFirstUser: ${JSON.stringify(
+            conversationsWithFirstUserAfter ?? ""
+          )}`
+        );
+
+        const receivedMessage =
+          conversationsWithFirstUserAfter.messages[0].content;
+        setDebug(`Message encrypted by server: ${receivedMessage}`);
+
+        const decryptedMessage = RSA.decrypt(receivedMessage, clientD, clientN);
+        setDebug(
+          `Message decrypted with client private key: ${decryptedMessage}`
+        );
+      };
+      testScenario();
+    </script>
+  </body>
+</html>

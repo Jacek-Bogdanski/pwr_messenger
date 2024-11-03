@@ -1,0 +1,9 @@
+import os
+
+class Config:
+    SECRET_KEY = '32774d67e77b8d09bd4ac2d9bef0f328a5520c0a80b8e2c52b4404b15d87e97b'
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///messenger.db'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SERVER_RSA_P = 6679
+    SERVER_RSA_Q = 7907
+    SERVER_RSA_E = 17
