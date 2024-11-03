@@ -7,7 +7,8 @@ ENV VIRTUAL_ENV=/app/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
  
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
  
 # Stage 2
 FROM python:3-alpine AS runner
@@ -15,16 +16,12 @@ FROM python:3-alpine AS runner
 WORKDIR /app
  
 COPY --from=builder /app/venv venv
-COPY app.py app.py
-COPY api.py api.py
-COPY auth.py auth.py
-COPY config.py config.py
-COPY models.py models.py
-COPY rsa.py rsa.py
- 
+COPY . .
+
 ENV VIRTUAL_ENV=/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 ENV FLASK_APP=app.py
+ENV FLASK_ENV=production
  
 EXPOSE 8080
  
