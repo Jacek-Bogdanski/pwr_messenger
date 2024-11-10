@@ -64,7 +64,7 @@
           return [N, D];
         };
 
-        // Modular exponentiation function to handle large numbers
+        // Modular exponentiation to handle large numbers
         modExp = (base, exponent, modulus) => {
           let result = 1;
           base = base % modulus;
@@ -83,7 +83,7 @@
           return decimal.toString(16).padStart(length, "0");
         };
 
-        // Encrypt function with hexadecimal encoding and colon separators
+       //  po staremu - szyfrowanie znak po znaku oddzielone :
         encrypt = (text, e, n) => {
           const maxHexLength = Math.ceil(Math.log2(n) / 4); // Each hex digit represents 4 bits
           return text
@@ -96,17 +96,105 @@
             .join(":"); // Join with colons
         };
 
-        // Decrypt function that splits the hex string and decodes each segment
-        decrypt = (cipher, d, n) => {
-          const hexValues = cipher.split(":"); // Split hex string by colons
-          return hexValues
-            .map((hexChar) => {
-              const encryptedDecimal = parseInt(hexChar, 16); // Convert hex to decimal
-              const asciiCode = this.modExp(encryptedDecimal, d, n); // Decrypt the decimal
-              return String.fromCharCode(asciiCode);
-            })
-            .join("");
-        };
+        intToNBitString(value, n) {
+          let binaryString = (value & ((1 << n) - 1)).toString(2);
+          return binaryString.padStart(n, "0");
+        }
+
+        bitStringToInt(bitString) {
+          return parseInt(bitString, 2);
+        }
+
+        binaryStringToText(binaryString) {
+          let text = "";
+          let byte;
+          let charCode;
+          console.log("decoded");
+
+          for (let i = 0; i < binaryString.length; i += 8) {
+            byte = binaryString.slice(i, i + 8);
+            if (this.isAllZeroes(byte)) {
+              console.log("ALL ZEROS");
+              break;
+            }
+            charCode = this.bitStringToInt(byte);
+            console.log(charCode, String.fromCharCode(charCode));
+            text += String.fromCharCode(charCode);
+          }
+          return text;
+        }
+
+        textToBinaryString(text) {
+          let binaryString = "";
+          for (let i = 0; i < text.length; i++) {
+            binaryString += this.intToNBitString(text.charCodeAt(i), 8);
+          }
+          return binaryString;
+        }
+
+
+        isAllZeroes(str) {
+          return /^0+$/.test(str);
+        }
+
+
+        // po nowemu - podział na chunki
+        decrypt(encryptedText, d, n) {
+          d = parseInt(d);
+          n = parseInt(n);
+
+          let chunkLength = Math.floor(Math.log2(n));
+          let binaryEncrypted = this.textToBinaryString(encryptedText);
+          let decryptedBinary = "";
+          let chunkValue;
+          let currentChunk, decodedValue, decodedBinary;
+
+          // dotąd ok
+
+          console.log(binaryEncrypted);
+
+          console.log("ChunkLength", chunkLength);
+
+          while (binaryEncrypted.length > 0) {
+            console.log("---");
+            currentChunk = binaryEncrypted.slice(0, chunkLength);
+            binaryEncrypted = binaryEncrypted.slice(chunkLength);
+            console.log(currentChunk);
+
+            chunkValue = this.bitStringToInt(currentChunk);
+            console.log(chunkValue, d, n);
+
+            decodedValue = this.modExp(chunkValue, d, n);
+            console.log(decodedValue);
+
+            decodedBinary = this.intToNBitString(decodedValue, chunkLength);
+            console.log(decodedBinary);
+            decryptedBinary += decodedBinary;
+          }
+
+          // odtąd ok
+
+          const decrypted = this.binaryStringToText(decryptedBinary);
+          console.log("Decrypted length: ", decrypted.length);
+          return decrypted;
+        }
+
+        encodePublicKey(n, e) {
+          let nStr = n.toString();
+          let eStr = e.toString();
+          const maxLength = Math.max(nStr.length, eStr.length);
+          nStr = nStr.padStart(maxLength, "0");
+          eStr = eStr.padStart(maxLength, "0");
+          return parseInt(nStr + eStr, 10);
+        }
+
+        decodePublicKey(encodedNum) {
+          const encodedStr = encodedNum.toString();
+          const halfLength = encodedStr.length / 2;
+          const n = parseInt(encodedStr.slice(0, halfLength), 10);
+          const e = parseInt(encodedStr.slice(halfLength), 10);
+          return [n, e];
+        }
 
         parseJwt = (token) => {
           const base64Url = token.split(".")[1];
@@ -186,21 +274,20 @@
       class Client {
         token = null;
 
-        register = async (username, password, n, e) => {
+        register = async (username, password) => {
           const result = await post("/auth/register", {
             username,
             password,
-            n,
-            e,
           });
 
           return result;
         };
 
-        login = async (username, password) => {
+        login = async (username, password, clientPub) => {
           const result = await post("/auth/login", {
             username,
             password,
+            clientPub,
           });
 
           return result;
@@ -239,12 +326,12 @@
 
         const client = new Client();
         const username = `michael.jack.${Math.random()}`;
-        const messageText = "Hello my friend! Smacznej kawusi";
+        const messageText = "Hello my friend! Smacznej kawusi ci życzę!";
         const passwordhash =
           "176d3c9c166b319d8b5470b336d7582861e347677770731a772135557ab2b7bc";
-        const clientP = 73;
-        const clientQ = 101;
-        const clientE = 17;
+        const clientP = 211;
+        const clientQ = 223;
+        const clientE = 179;
         const [clientN, clientD] = RSA.getKeyPair(clientP, clientQ, clientE);
 
         setDebug(`clientP: ${clientP}`);
@@ -253,15 +340,14 @@
         setDebug(`clientE: ${clientE}`);
         setDebug(`clientN: ${clientN}`);
 
-        const registerResult = await client.register(
-          username,
-          passwordhash,
-          clientN,
-          clientE
-        );
+        const registerResult = await client.register(username, passwordhash);
         setDebug(`Register result: ${JSON.stringify(registerResult ?? "")}`);
 
-        const loginResult = await client.login(username, passwordhash);
+        const loginResult = await client.login(
+          username,
+          passwordhash,
+          RSA.encodePublicKey(clientN, clientE)
+        );
         setDebug(`Login result: ${JSON.stringify(loginResult ?? "")}`);
 
         const JWToken = loginResult.token;
@@ -276,8 +362,8 @@
         const tokenContent = RSA.parseJwt(JWToken);
         setDebug(`JWT content: ${JSON.stringify(tokenContent ?? "")}`);
 
-        const serverE = tokenContent.e;
-        const serverN = tokenContent.n;
+        const serverPub = tokenContent.serverPub;
+        const [serverN, serverE] = RSA.decodePublicKey(serverPub);
         setDebug(`serverE: ${serverE}`);
         setDebug(`serverN: ${serverN}`);
 
@@ -331,6 +417,11 @@
           `Message decrypted with client private key: ${decryptedMessage}`
         );
 
+        console.log(
+          "Original length: ",
+          conversationsWithFirstUserAfter.messages[0].contentPlainText.length
+        );
+
         const sendButton = document
           .getElementById("send")
           .addEventListener("click", async () => {
@@ -355,8 +446,8 @@
               `Conversation: ${JSON.stringify(conversationAfter ?? "")}`
             );
 
-            document.getElementById("receiver").value = '';
-            document.getElementById("content").value = '';
+            document.getElementById("receiver").value = "";
+            document.getElementById("content").value = "";
           });
       };
       testScenario();

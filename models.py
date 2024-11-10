@@ -9,8 +9,6 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
-    n = db.Column(db.String(500), nullable=False)
-    e = db.Column(db.String(500), nullable=False)
 
     sent_messages = db.relationship('Message', backref='sender', foreign_keys='Message.sender_id', lazy='dynamic')
     received_messages = db.relationship('Message', backref='receiver', foreign_keys='Message.receiver_id', lazy='dynamic')

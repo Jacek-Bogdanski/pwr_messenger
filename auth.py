@@ -20,15 +20,16 @@ def token_required(f):
         try:
             data = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
             current_user = User.query.filter_by(id=data['id']).first()
+            client_pub = data.get('clientPub')
         except jwt.ExpiredSignatureError:
             return jsonify({'message': 'Token expired!'}), 401
         except jwt.InvalidTokenError:
             return jsonify({'message': 'Invalid Token!'}), 401
 
-        return f(current_user, *args, **kwargs)
+        return f(current_user, client_pub, *args, **kwargs)
     return decorated
 
-def authenticate(username, password):
+def authenticate(username, password, clientPub, serverPub):
     user = User.query.filter_by(username=username).first()
 
     if not user or not check_password_hash(user.password, password):
@@ -37,7 +38,9 @@ def authenticate(username, password):
     token = jwt.encode(
         {
             'id': user.id,
-            'exp': datetime.utcnow() + timedelta(hours=24)
+            'exp': datetime.utcnow() + timedelta(hours=24),
+            'clientPub': clientPub,
+            'serverPub': serverPub,
         },
         current_app.config['SECRET_KEY'],
         algorithm="HS256"
