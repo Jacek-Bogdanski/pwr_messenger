@@ -4,7 +4,7 @@ from flask import Blueprint, request, jsonify, render_template, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from models import db, User, Message
 from auth import token_required, authenticate
-from rsa import mod_exp, decimal_to_hex, encrypt, modular_inverse, get_key_pair, decrypt
+from rsa import encrypt, decrypt, get_key_pair, encode_public_key, decode_public_key, get_server_pub
 
 routes = Blueprint('routes', __name__)
 
@@ -34,26 +34,6 @@ def register():
 
     return jsonify({'message': 'Registered succesfull!'}), 200
 
-def encode_public_key(n, e):
-    max_length = max(len(str(n)), len(str(e)))
-    n_str = str(n).zfill(max_length)
-    e_str = str(e).zfill(max_length)
-    return int(n_str + e_str)
-
-def decode_public_key(encoded_num):
-    encoded_str = str(encoded_num)
-    half_length = len(encoded_str) // 2
-    n = int(encoded_str[:half_length])
-    e = int(encoded_str[half_length:])
-    return n, e
-
-def get_server_pub():
-    p = current_app.config['SERVER_RSA_P']
-    q= current_app.config['SERVER_RSA_Q']
-    n = p * q
-    return encode_public_key(n, current_app.config['SERVER_RSA_E'])
-
-
 @routes.route('/auth/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -64,7 +44,7 @@ def login():
     if not data or not data.get('username') or not data.get('password') or not data.get('clientPub'):
         return jsonify({'message': 'Not enough data to login. username, password, clientPub!'}), 400
     
-    token = authenticate(data['username'], data['password'], data['clientPub'], get_server_pub())
+    token = authenticate(data['username'], data['password'], data['clientPub'], get_server_pub(current_app))
 
     if not token:
         return jsonify({'message': 'Bad username or password!'}), 401

@@ -64,7 +64,37 @@
           return [N, D];
         };
 
-        // Modular exponentiation to handle large numbers
+
+        encodePublicKey(n, e) {
+          let nStr = n.toString();
+          let eStr = e.toString();
+          const maxLength = Math.max(nStr.length, eStr.length);
+          nStr = nStr.padStart(maxLength, "0");
+          eStr = eStr.padStart(maxLength, "0");
+          return parseInt(nStr + eStr, 10);
+        }
+
+        decodePublicKey(encodedNum) {
+          const encodedStr = encodedNum.toString();
+          const halfLength = encodedStr.length / 2;
+          const n = parseInt(encodedStr.slice(0, halfLength), 10);
+          const e = parseInt(encodedStr.slice(halfLength), 10);
+          return [n, e];
+        }
+
+        parseJwt = (token) => {
+          const base64Url = token.split(".")[1];
+          const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+          const jsonPayload = decodeURIComponent(
+            atob(base64)
+              .split("")
+              .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+              .join("")
+          );
+
+          return JSON.parse(jsonPayload);
+        };
+
         modExp = (base, exponent, modulus) => {
           let result = 1;
           base = base % modulus;
@@ -143,7 +173,7 @@
           d = parseInt(d);
           n = parseInt(n);
 
-          let chunkLength = Math.floor(Math.log2(n));
+          let chunkLength = Math.ceil(Math.log2(n));
           let binaryEncrypted = this.textToBinaryString(encryptedText);
           let decryptedBinary = "";
           let chunkValue;
@@ -179,35 +209,6 @@
           return decrypted;
         }
 
-        encodePublicKey(n, e) {
-          let nStr = n.toString();
-          let eStr = e.toString();
-          const maxLength = Math.max(nStr.length, eStr.length);
-          nStr = nStr.padStart(maxLength, "0");
-          eStr = eStr.padStart(maxLength, "0");
-          return parseInt(nStr + eStr, 10);
-        }
-
-        decodePublicKey(encodedNum) {
-          const encodedStr = encodedNum.toString();
-          const halfLength = encodedStr.length / 2;
-          const n = parseInt(encodedStr.slice(0, halfLength), 10);
-          const e = parseInt(encodedStr.slice(halfLength), 10);
-          return [n, e];
-        }
-
-        parseJwt = (token) => {
-          const base64Url = token.split(".")[1];
-          const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-          const jsonPayload = decodeURIComponent(
-            atob(base64)
-              .split("")
-              .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-              .join("")
-          );
-
-          return JSON.parse(jsonPayload);
-        };
       }
 
       const RSA = new RSAConnect();
@@ -326,12 +327,12 @@
 
         const client = new Client();
         const username = `michael.jack.${Math.random()}`;
-        const messageText = "Hello my friend! Smacznej kawusi ci życzę!";
+        const messageText = "Hello my friend! Smacznej kawusi! Jest ok!";
         const passwordhash =
           "176d3c9c166b319d8b5470b336d7582861e347677770731a772135557ab2b7bc";
-        const clientP = 211;
-        const clientQ = 223;
-        const clientE = 179;
+        const clientP = 61;
+        const clientQ = 41;
+        const clientE = 17;
         const [clientN, clientD] = RSA.getKeyPair(clientP, clientQ, clientE);
 
         setDebug(`clientP: ${clientP}`);
