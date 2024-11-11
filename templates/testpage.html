@@ -19,12 +19,6 @@
     <h1>Connection Test Page</h1>
     <div id="debugWrapper" class="debugWrapper"></div>
 
-    <div class="formWrapper">
-      <input type="text" id="receiver" placeholder="Odbiorca" />
-      <input type="text" id="content" placeholder="Wiadomość" />
-      <button id="send">Send</button>
-    </div>
-
     <script>
       const setDebug = (content) => {
         const p = document.createElement("pre");
@@ -93,9 +87,8 @@
 
           return JSON.parse(jsonPayload);
         };
-        
-        encrypt(messageText, serverE, serverN){
 
+        encrypt(messageText, serverE, serverN) {
           // implement encryption
 
           return messageText;
@@ -225,7 +218,8 @@
 
         const client = new Client();
         const username = `michael.jack.${Math.random()}`;
-        const messageText = "Hello my friend! Smacznej kawusi! Jest ok! Wszystko powinno tutaj smigac.";
+        const messageText =
+          "Hello my friend! Smacznej kawusi! Jest ok! Wszystko powinno tutaj smigac. Ale nie uzywajcie polskich znakow!";
         const passwordhash =
           "176d3c9c166b319d8b5470b336d7582861e347677770731a772135557ab2b7bc";
         const clientP = 61;
@@ -255,7 +249,12 @@
           return;
         }
 
+        setDebug(`Test start`);
         const testResult = await client.testencryption(JWToken, messageText);
+        setDebug(`#`);
+        setDebug(`Test Result: ${JSON.stringify(testResult ?? "")}`);
+        setDebug(`#`);
+        setDebug(`Test end`);
 
         const users = await client.users(JWToken);
         setDebug(`Users list: ${JSON.stringify(users ?? "")}`);
