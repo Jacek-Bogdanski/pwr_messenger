@@ -64,7 +64,6 @@
           return [N, D];
         };
 
-
         encodePublicKey(n, e) {
           let nStr = n.toString();
           let eStr = e.toString();
@@ -95,9 +94,10 @@
           return JSON.parse(jsonPayload);
         };
 
-        modExp = (base, exponent, modulus) => {
-          let result = 1;
+        modExp(base, exponent, modulus) {
           base = base % modulus;
+          let result = 1;
+
           while (exponent > 0) {
             if (exponent % 2 === 1) {
               result = (result * base) % modulus;
@@ -105,15 +105,16 @@
             exponent = Math.floor(exponent / 2);
             base = (base * base) % modulus;
           }
+
           return result;
-        };
+        }
 
         // Function to convert decimal to hex with padding to a fixed length
         decimalToHex = (decimal, length) => {
           return decimal.toString(16).padStart(length, "0");
         };
 
-       //  po staremu - szyfrowanie znak po znaku oddzielone :
+        //  po staremu - szyfrowanie znak po znaku oddzielone :
         encrypt = (text, e, n) => {
           const maxHexLength = Math.ceil(Math.log2(n) / 4); // Each hex digit represents 4 bits
           return text
@@ -162,11 +163,9 @@
           return binaryString;
         }
 
-
         isAllZeroes(str) {
           return /^0+$/.test(str);
         }
-
 
         // po nowemu - podział na chunki
         decrypt(encryptedText, d, n) {
@@ -208,7 +207,6 @@
           console.log("Decrypted length: ", decrypted.length);
           return decrypted;
         }
-
       }
 
       const RSA = new RSAConnect();

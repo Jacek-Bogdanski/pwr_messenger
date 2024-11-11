@@ -82,8 +82,6 @@ def encrypt(text, e, n):
         buffer += "0" * padding_length
                 
     while len(buffer) > 0:
-        if len(buffer) < chunk_length:
-            buffer += "0" * chunk_length
         current = buffer[:chunk_length]
         buffer = buffer[chunk_length:]
         coded = mod_exp(bit_string_to_int(current), e, n)
