@@ -93,119 +93,12 @@
 
           return JSON.parse(jsonPayload);
         };
+        
+        encrypt(messageText, serverE, serverN){
 
-        modExp(base, exponent, modulus) {
-          base = base % modulus;
-          let result = 1;
+          // implement encryption
 
-          while (exponent > 0) {
-            if (exponent % 2 === 1) {
-              result = (result * base) % modulus;
-            }
-            exponent = Math.floor(exponent / 2);
-            base = (base * base) % modulus;
-          }
-
-          return result;
-        }
-
-        // Function to convert decimal to hex with padding to a fixed length
-        decimalToHex = (decimal, length) => {
-          return decimal.toString(16).padStart(length, "0");
-        };
-
-        //  po staremu - szyfrowanie znak po znaku oddzielone :
-        encrypt = (text, e, n) => {
-          const maxHexLength = Math.ceil(Math.log2(n) / 4); // Each hex digit represents 4 bits
-          return text
-            .split("")
-            .map((char) => {
-              const asciiCode = char.charCodeAt(0);
-              const encryptedChar = this.modExp(asciiCode, e, n);
-              return this.decimalToHex(encryptedChar, maxHexLength); // Fixed-length hex
-            })
-            .join(":"); // Join with colons
-        };
-
-        intToNBitString(value, n) {
-          let binaryString = (value & ((1 << n) - 1)).toString(2);
-          return binaryString.padStart(n, "0");
-        }
-
-        bitStringToInt(bitString) {
-          return parseInt(bitString, 2);
-        }
-
-        binaryStringToText(binaryString) {
-          let text = "";
-          let byte;
-          let charCode;
-          console.log("decoded");
-
-          for (let i = 0; i < binaryString.length; i += 8) {
-            byte = binaryString.slice(i, i + 8);
-            if (this.isAllZeroes(byte)) {
-              console.log("ALL ZEROS");
-              break;
-            }
-            charCode = this.bitStringToInt(byte);
-            console.log(charCode, String.fromCharCode(charCode));
-            text += String.fromCharCode(charCode);
-          }
-          return text;
-        }
-
-        textToBinaryString(text) {
-          let binaryString = "";
-          for (let i = 0; i < text.length; i++) {
-            binaryString += this.intToNBitString(text.charCodeAt(i), 8);
-          }
-          return binaryString;
-        }
-
-        isAllZeroes(str) {
-          return /^0+$/.test(str);
-        }
-
-        // po nowemu - podział na chunki
-        decrypt(encryptedText, d, n) {
-          d = parseInt(d);
-          n = parseInt(n);
-
-          let chunkLength = Math.ceil(Math.log2(n));
-          let binaryEncrypted = this.textToBinaryString(encryptedText);
-          let decryptedBinary = "";
-          let chunkValue;
-          let currentChunk, decodedValue, decodedBinary;
-
-          // dotąd ok
-
-          console.log(binaryEncrypted);
-
-          console.log("ChunkLength", chunkLength);
-
-          while (binaryEncrypted.length > 0) {
-            console.log("---");
-            currentChunk = binaryEncrypted.slice(0, chunkLength);
-            binaryEncrypted = binaryEncrypted.slice(chunkLength);
-            console.log(currentChunk);
-
-            chunkValue = this.bitStringToInt(currentChunk);
-            console.log(chunkValue, d, n);
-
-            decodedValue = this.modExp(chunkValue, d, n);
-            console.log(decodedValue);
-
-            decodedBinary = this.intToNBitString(decodedValue, chunkLength);
-            console.log(decodedBinary);
-            decryptedBinary += decodedBinary;
-          }
-
-          // odtąd ok
-
-          const decrypted = this.binaryStringToText(decryptedBinary);
-          console.log("Decrypted length: ", decrypted.length);
-          return decrypted;
+          return messageText;
         }
       }
 
@@ -309,6 +202,13 @@
           return await get(`/users`, token);
         };
 
+        testencryption = async (token, message = null) => {
+          return await get(
+            `/testencryption${message ? `?message=${message}` : ""}`,
+            token
+          );
+        };
+
         conversations = async (token) => {
           return await get(`/message/conversations`, token);
         };
@@ -325,7 +225,7 @@
 
         const client = new Client();
         const username = `michael.jack.${Math.random()}`;
-        const messageText = "Hello my friend! Smacznej kawusi! Jest ok!";
+        const messageText = "Hello my friend! Smacznej kawusi! Jest ok! Wszystko powinno tutaj smigac.";
         const passwordhash =
           "176d3c9c166b319d8b5470b336d7582861e347677770731a772135557ab2b7bc";
         const clientP = 61;
@@ -354,6 +254,8 @@
           setDebug(`Empty JWT - exit.`);
           return;
         }
+
+        const testResult = await client.testencryption(JWToken, messageText);
 
         const users = await client.users(JWToken);
         setDebug(`Users list: ${JSON.stringify(users ?? "")}`);
@@ -410,44 +312,6 @@
         const receivedMessage =
           conversationsWithFirstUserAfter.messages[0].content;
         setDebug(`Message encrypted by server: ${receivedMessage}`);
-
-        const decryptedMessage = RSA.decrypt(receivedMessage, clientD, clientN);
-        setDebug(
-          `Message decrypted with client private key: ${decryptedMessage}`
-        );
-
-        console.log(
-          "Original length: ",
-          conversationsWithFirstUserAfter.messages[0].contentPlainText.length
-        );
-
-        const sendButton = document
-          .getElementById("send")
-          .addEventListener("click", async () => {
-            const receiver = document.getElementById("receiver").value;
-            const content = document.getElementById("content").value;
-            const encryptedMessage = RSA.encrypt(content, serverE, serverN);
-
-            const sendMessage = await client.sendMessage(
-              receiver,
-              encryptedMessage,
-              JWToken
-            );
-            setDebug(
-              `SendMessage result: ${JSON.stringify(sendMessage ?? "")}`
-            );
-
-            const conversationAfter = await client.conversationsWithUser(
-              receiver,
-              JWToken
-            );
-            setDebug(
-              `Conversation: ${JSON.stringify(conversationAfter ?? "")}`
-            );
-
-            document.getElementById("receiver").value = "";
-            document.getElementById("content").value = "";
-          });
       };
       testScenario();
     </script>

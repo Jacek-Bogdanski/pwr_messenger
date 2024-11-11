@@ -51,6 +51,33 @@ def login():
 
     return jsonify({'token': token}), 200
 
+
+
+@routes.route('/testencryption', methods=['GET'])
+@token_required
+def test_encryption(current_user, client_pub):
+    
+    P = current_app.config['SERVER_RSA_P']
+    Q = current_app.config['SERVER_RSA_Q']
+    E = current_app.config['SERVER_RSA_E']
+    N, D = get_key_pair(P, Q, E)
+    
+    content = request.args.get('message', "Hello world encryption!")
+    
+    encrypted = encrypt(content,E, N)
+    plaintext = decrypt(encrypted, D, N)
+    
+    clientn, cliente = decode_public_key(client_pub)
+    encryptedClient = encrypt(content,cliente, clientn)
+
+    return jsonify({
+        'original': content, 
+        'encryptedServerPublicKey':encrypted, 
+        'decryptedServerPrivateKey':plaintext,
+        'encryptedClientPublicKey':encryptedClient,
+        }), 200
+
+
 @routes.route('/message/conversations', methods=['POST'])
 @token_required
 def send_message(current_user, client_pub):
@@ -68,8 +95,10 @@ def send_message(current_user, client_pub):
     E = current_app.config['SERVER_RSA_E']
     N, D = get_key_pair(P, Q, E)
     
+    plaintext = decrypt(data['content'], D, N)
+    
     new_message = Message(
-        content=decrypt(data['content'], D, N),
+        content=plaintext,
         sender_id=current_user.id,
         receiver_id=receiver.id
     )

@@ -38,7 +38,6 @@ def get_key_pair(P, Q, E):
     return N, D
 
 
-
 def mod_exp(base, exponent, modulus):
     base = int(base) % int(modulus)
     result = 1
@@ -49,10 +48,7 @@ def mod_exp(base, exponent, modulus):
         base = (base * base) % modulus
     return result
 
-
 def int_to_n_bit_string(value, n):
-    if value < 0 or value >= (1 << n):
-        raise ValueError(f"Value {value} exceeds the range for {n}-bit binary representation")
     binary_string = bin(value)[2:]
     return binary_string.zfill(n)
 
@@ -60,49 +56,44 @@ def bit_string_to_int(bit_string):
     return int(bit_string, 2)
 
 def binary_string_to_text(binary_string):
-    return ''.join(chr(int(binary_string[i:i+8], 2)) for i in range(0, len(binary_string), 8))
+    text = ''.join(chr(int(binary_string[i:i+8], 2)) for i in range(0, len(binary_string), 8))
+    return text
 
-## po nowemu - podział na chunki
 def encrypt(text, e, n):
     e = int(e)
     n = int(n)
-    
-    chunk_length = math.ceil(math.log(n,2))
-    buffer = ""
-    current = ""
-    coded = 0
-    output = ""
-    test = ""
-    
-    for letter in text:
-        buffer += int_to_n_bit_string(ord(letter),8)
-        
-    if len(buffer) % chunk_length != 0:
-        padding_length = chunk_length - (len(buffer) % chunk_length)
-        buffer += "0" * padding_length
-                
-    while len(buffer) > 0:
-        current = buffer[:chunk_length]
-        buffer = buffer[chunk_length:]
-        coded = mod_exp(bit_string_to_int(current), e, n)
-        output += int_to_n_bit_string(coded,chunk_length) 
-        
-    if len(output) % 8 != 0:
-        padding_length = 8 - (len(output) % 8)
-        output += "0" * padding_length
-    
-    return binary_string_to_text(output)
-    
+    chunk_length = math.ceil(math.log(n, 2))
 
-## po staremu - szyfrowanie znak po znaku oddzielone :
-def decrypt(encrypted_message, server_d, server_n):
-    encrypted_chunks = encrypted_message.split(':')
+    binary_data = ''.join(int_to_n_bit_string(ord(char), 8) for char in text)
+    if len(binary_data) % chunk_length != 0:
+        binary_data = binary_data.ljust(len(binary_data) + chunk_length - (len(binary_data) % chunk_length), '0')
+    
+    binary_data = binary_data.ljust(len(binary_data) + chunk_length, '0')
+    
+    encrypted_binary = ''
+    while binary_data:
+        chunk = binary_data[:chunk_length]
+        binary_data = binary_data[chunk_length:]
+        encrypted_value = mod_exp(bit_string_to_int(chunk), e, n)
+        encrypted_binary += int_to_n_bit_string(encrypted_value, chunk_length)
+    
+    return binary_string_to_text(encrypted_binary)
 
-    decrypted_message = ""
-    for hex_chunk in encrypted_chunks:
-        encrypted_int = int(hex_chunk, 16)
-        decrypted_int = pow(encrypted_int, server_d, server_n)
-        decrypted_message_bytes = decrypted_int.to_bytes((decrypted_int.bit_length() + 7) // 8, 'big')
-        decrypted_message += decrypted_message_bytes.decode('utf-8', errors='ignore')
+def decrypt(encrypted_text, d, n):
+    d = int(d)
+    n = int(n)
+    chunk_length = math.ceil(math.log(n, 2))
 
-    return decrypted_message
+    binary_encrypted = ''.join(int_to_n_bit_string(ord(char), 8) for char in encrypted_text)
+
+    decrypted_binary = ""
+    while binary_encrypted:
+        current_chunk = binary_encrypted[:chunk_length]
+        binary_encrypted = binary_encrypted[chunk_length:]
+        chunk_value = bit_string_to_int(current_chunk)
+        decoded_value = mod_exp(chunk_value, d, n)
+        decrypted_binary += int_to_n_bit_string(decoded_value, chunk_length)
+
+    decrypted_text = binary_string_to_text(decrypted_binary)
+    
+    return decrypted_text.rstrip('\x00')
