@@ -139,7 +139,6 @@ def get_conversation_messages(current_user, client_pub, participant):
     for msg in messages:
         messages_data.append({
             'content': encrypt(msg.content,e, n),
-            'contentPlainText': msg.content,
             'sender': User.query.get(msg.sender_id).username,
             'receiver': User.query.get(msg.receiver_id).username,
             'timestamp': int(msg.timestamp.timestamp())
